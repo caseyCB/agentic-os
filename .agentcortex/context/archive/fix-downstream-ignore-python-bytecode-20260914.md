@@ -179,3 +179,13 @@ none
 - Scripts named `scratchpad/*.sh` are session-local and not committed; each line records its command shape and result.
 - Re-run at `6a3de6e` (entry moved last): battery results identical to the `ceed4c5` line below except `.gitignore` shas; `deploy.ps1` vs `deploy.sh` sha `C52B22DE30` both, block ends with the bytecode entry.
 - Downstream battery at `ceed4c5` (`scratchpad/downstream_scenarios.sh`): upgrade from main 33 -> 36 -> 36, validate `pass=86 warn=1 fail=0 skip=8` before and after; committed `.pyc` stay tracked until `git rm -r --cached`, then 0/0; legacy `AI Brain OS` block replaced, idempotent; CRLF adopter file idempotent on main and branch; subdirectory install ignores only its own bytecode, root `.gitignore` untouched; `--no-python` summary identical to main, 0 `.pyc`.
+
+## Final Verification
+
+> Sole location of this unit's closing figures, taken against `a45f4f6` (tree clean) after every other write.
+
+- `validate.sh` exit 0 and `validate.ps1` exit 0: both `pass=99 warn=4 fail=0 skip=3`, identical; all 4 WARNs pre-existing (none name this log)
+- 19 SSoT/backlog/chain-sensitive test files + the 3.9 ratchet -> `388 passed`, exit 0
+- `check_audit_chain.py` intact; `check_ssot_caps.py` ship history 10/10
+
+⚡ ACX
