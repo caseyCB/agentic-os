@@ -492,9 +492,17 @@ def test_redeploy_leaves_gitignore_unchanged_and_adopter_policy_alone() -> None:
             pyc.parent.mkdir(parents=True, exist_ok=True)
             pyc.write_bytes(b"")
 
+        # Judge only the target's .gitignore: a developer's global excludes file
+        # (commonly listing __pycache__/) would otherwise decide the result.
+        no_global_excludes = Path(td) / "empty-excludes"
+        no_global_excludes.write_text("", encoding="utf-8")
+
         def ignored(path: Path) -> bool:
             rel = path.relative_to(target).as_posix()
-            return subprocess.run([git_path, "-C", str(target), "check-ignore", "-q", rel]).returncode == 0
+            return subprocess.run([
+                git_path, "-c", f"core.excludesFile={no_global_excludes.as_posix()}",
+                "-C", str(target), "check-ignore", "-q", rel,
+            ]).returncode == 0
 
         assert ignored(framework_pyc), "framework bytecode must be ignored"
         assert not ignored(adopter_pyc), "the adopter's own bytecode must be left to the adopter's rules"

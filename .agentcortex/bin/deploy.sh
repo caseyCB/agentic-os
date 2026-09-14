@@ -1093,9 +1093,6 @@ write_downstream_ignore_block() {
 *.acx-incoming
 *.acx-local
 
-# Framework Tool Bytecode (framework namespace only; project policy untouched)
-.agentcortex/**/__pycache__/
-
 # Per-Operator Tool State (this project's .claude/settings.json declares
 # settings.local.json user-local; keep git agreeing with that declaration)
 .claude/settings.local.json
@@ -1105,6 +1102,9 @@ write_downstream_ignore_block() {
 .claude-chat/
 .cursor/
 .antigravity/scratch/
+
+# Framework Tool Bytecode (framework namespace only; project policy untouched)
+.agentcortex/**/__pycache__/
 
 # End Agentic OS Template - Downstream Ignore Defaults
 EOT
@@ -1128,12 +1128,15 @@ strip_managed_ignore_blocks() {
         managed[".agentcortex-src/"] = 1
         managed["*.acx-incoming"] = 1
         managed["*.acx-local"] = 1
-        managed[".agentcortex/**/__pycache__/"] = 1
         managed[".claude/settings.local.json"] = 1
         managed[".openrouter/"] = 1
         managed[".claude-chat/"] = 1
         managed[".cursor/"] = 1
         managed[".antigravity/scratch/"] = 1
+        # Add new entries here AND last in the block above: an older deploy.sh
+        # stops stripping at the first entry it does not know, so every block
+        # line after that entry would be left behind outside the markers.
+        managed[".agentcortex/**/__pycache__/"] = 1
         # Legacy paths from older versions (strip during upgrade)
         managed["AGENTS.md"] = 1
         managed["CLAUDE.md"] = 1
