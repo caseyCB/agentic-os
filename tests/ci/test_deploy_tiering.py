@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -416,6 +417,95 @@ def test_deploy_gitignores_acx_local_sidecar() -> None:
     does not pollute the downstream working tree."""
     s = DEPLOY_SH.read_text(encoding="utf-8")
     assert "*.acx-local" in s, "deploy.sh must add *.acx-local to the managed .gitignore block"
+
+
+def _deploy_ignore_block_and_managed_table() -> tuple[list[str], set[str]]:
+    """Parse the two halves of deploy.sh's .gitignore handling separately:
+    the entries write_downstream_ignore_block() emits, and the managed[]
+    table strip_managed_ignore_blocks() removes on the next deploy."""
+    s = DEPLOY_SH.read_text(encoding="utf-8")
+    heredoc = re.search(r"write_downstream_ignore_block\(\) \{\n\s*cat <<'EOT'\n(.*?)\nEOT\n", s, re.S)
+    assert heredoc, "could not locate the heredoc in write_downstream_ignore_block()"
+    entries = [
+        line for line in heredoc.group(1).splitlines()
+        if line.strip() and not line.startswith("#")
+    ]
+    managed = set(re.findall(r'managed\["([^"]+)"\] = 1', s))
+    assert entries and managed, "parsed an empty ignore block or managed[] table"
+    return entries, managed
+
+
+def test_deploy_ignore_block_entries_are_all_strippable() -> None:
+    """PR #435 review: every entry deploy.sh writes into the managed .gitignore
+    block must also be in the managed[] strip table. A missing entry ends the
+    strip at that line on the next deploy, so the rest of the old block
+    survives outside the markers and the adopter's .gitignore grows every time."""
+    entries, managed = _deploy_ignore_block_and_managed_table()
+    missing = [e for e in entries if e not in managed]
+    assert not missing, f"add these to managed[] in strip_managed_ignore_blocks(): {missing}"
+
+
+def test_deploy_ignores_framework_bytecode_in_framework_namespace_only() -> None:
+    """#430: validate.sh runs the framework's Python tools, which write
+    __pycache__/ into the adopter's tree and get staged by the banner's own
+    `git add .agentcortex/`. The block ignores that bytecode inside the
+    framework namespace only, so it must cover every .py deploy ships."""
+    entries, _ = _deploy_ignore_block_and_managed_table()
+    assert ".agentcortex/**/__pycache__/" in entries
+    for repo_wide in ("__pycache__/", "*.pyc"):
+        assert repo_wide not in entries, (
+            f"{repo_wide} would also ignore the adopter's own files; keep the pattern framework-scoped"
+        )
+    deployed_py = [
+        parts[1] for parts in (line.split() for line in DEPLOY_MANIFEST_GOLDEN.read_text(encoding="utf-8").splitlines())
+        if len(parts) >= 2 and parts[1].endswith(".py")
+    ]
+    assert deployed_py, "golden lists no deployed .py files; the coverage check would pass vacuously"
+    uncovered = [p for p in deployed_py if not p.startswith(".agentcortex/")]
+    assert not uncovered, f"deployed .py outside .agentcortex/ is not covered by the bytecode ignore: {uncovered}"
+
+
+@requires_bash
+@pytest.mark.skipif(git_path is None, reason="git not available")
+def test_redeploy_leaves_gitignore_unchanged_and_adopter_policy_alone() -> None:
+    """#430 / PR #435: a second deploy must write a byte-identical .gitignore,
+    keep the adopter's own rules, ignore framework bytecode, and leave the
+    adopter's own bytecode to the adopter's own rules."""
+    with tempfile.TemporaryDirectory() as td:
+        target = Path(td) / "proj"
+        target.mkdir()
+        subprocess.run([git_path, "init", "-q", str(target)], check=True)
+        adopter_rules = "node_modules/\ndist/\n"
+        gitignore = target / ".gitignore"
+        gitignore.write_bytes(adopter_rules.encode("utf-8"))
+
+        assert _deploy(target).returncode == 0, "first deploy failed"
+        first = gitignore.read_bytes()
+        assert _deploy(target).returncode == 0, "second deploy failed"
+        assert gitignore.read_bytes() == first, "re-deploy changed .gitignore"
+        assert first.decode("utf-8").replace("\r\n", "\n").startswith(adopter_rules), \
+            "adopter's own ignore rules must stay first and verbatim"
+
+        framework_pyc = target / ".agentcortex" / "tools" / "__pycache__" / "guard_context_write.cpython-314.pyc"
+        adopter_pyc = target / "app" / "__pycache__" / "main.cpython-314.pyc"
+        for pyc in (framework_pyc, adopter_pyc):
+            pyc.parent.mkdir(parents=True, exist_ok=True)
+            pyc.write_bytes(b"")
+
+        # Judge only the target's .gitignore: a developer's global excludes file
+        # (commonly listing __pycache__/) would otherwise decide the result.
+        no_global_excludes = Path(td) / "empty-excludes"
+        no_global_excludes.write_text("", encoding="utf-8")
+
+        def ignored(path: Path) -> bool:
+            rel = path.relative_to(target).as_posix()
+            return subprocess.run([
+                git_path, "-c", f"core.excludesFile={no_global_excludes.as_posix()}",
+                "-C", str(target), "check-ignore", "-q", rel,
+            ]).returncode == 0
+
+        assert ignored(framework_pyc), "framework bytecode must be ignored"
+        assert not ignored(adopter_pyc), "the adopter's own bytecode must be left to the adopter's rules"
 
 
 @requires_powershell

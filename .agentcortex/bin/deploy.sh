@@ -1103,6 +1103,9 @@ write_downstream_ignore_block() {
 .cursor/
 .antigravity/scratch/
 
+# Framework Tool Bytecode (framework namespace only; project policy untouched)
+.agentcortex/**/__pycache__/
+
 # End Agentic OS Template - Downstream Ignore Defaults
 EOT
 }
@@ -1130,6 +1133,10 @@ strip_managed_ignore_blocks() {
         managed[".claude-chat/"] = 1
         managed[".cursor/"] = 1
         managed[".antigravity/scratch/"] = 1
+        # Add new entries here AND last in the block above: an older deploy.sh
+        # stops stripping at the first entry it does not know, so every block
+        # line after that entry would be left behind outside the markers.
+        managed[".agentcortex/**/__pycache__/"] = 1
         # Legacy paths from older versions (strip during upgrade)
         managed["AGENTS.md"] = 1
         managed["CLAUDE.md"] = 1
