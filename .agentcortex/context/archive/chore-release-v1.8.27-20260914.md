@@ -149,3 +149,12 @@ none
 
 - Stale-version sweep after bump: `git grep 1.8.26` outside `CHANGELOG.md`, `archive/`, `current_state.md` and the backlog -> no hits.
 - zh-TW banner diffs byte-identical except the version digits (`cat -v` of both sides).
+
+## Final Verification
+
+> Sole location of this cut's closing figures, taken against `386d522` (tree clean) after every other write.
+
+- `validate.sh` exit 0 and `validate.ps1` exit 0: both `pass=99 warn=4 fail=0 skip=3`, identical; all 4 WARNs pre-existing
+- `test_release_version_consistency.py` 2 passed; `check_audit_chain.py` intact; `check_ssot_caps.py` ship history 10/10
+
+⚡ ACX
