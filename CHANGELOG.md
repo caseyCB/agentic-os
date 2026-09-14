@@ -1,5 +1,34 @@
 # Changelog
 
+## [1.8.27] - 2026-09-14
+
+This release fixes a first-commit annoyance for any install that runs the framework's Python tools. It also adds two skill-description clarifications and an upstream CI fix. **If you already committed `.agentcortex/tools/__pycache__/`, run `git rm -r --cached .agentcortex/tools/__pycache__` once after updating. A `.gitignore` rule does not untrack files git already tracks, and deploy does not run git commands in your repository.**
+
+- **The framework's own bytecode no longer lands in your first commit (#430, PR #435, contributed by @zerone0x).** The deploy banner's self-check (`validate.sh`) made Python write `.agentcortex/tools/__pycache__/*.pyc`, and the banner's own `git add … .agentcortex/ …` then staged those files. The managed `.gitignore` block now carries `.agentcortex/**/__pycache__/`. It is scoped to the framework's namespace, so your project's own ignore policy is untouched; a repo-wide `__pycache__/` + `*.pyc` would also have ignored bytecode in your own code. Upgrading adds three lines, and every re-deploy after that is byte-identical. The entry is written last in the block, so deploying once from an older framework version afterwards leaves a single stray line.
+- **Measured against v1.8.26 on real deploys:**
+  - fresh install
+  - upgrade of an install that had already committed bytecode
+  - the legacy `AI Brain OS` block
+  - a CRLF `.gitignore`
+  - a subdirectory install inside a monorepo
+  - `--no-python`
+  - `deploy.ps1` versus `deploy.sh` (byte-identical output)
+
+  Validator tallies are unchanged in every case (`86/1/0/8`; `--no-python` `76/1/0/18`).
+- **Two skill descriptions now lead with when to use them (#437).** The `description` frontmatter of `production-readiness` and `systematic-debugging` now states activation conditions first, per the description contract in `app-init.md`. Codex matches skills on this field. Unmodified copies update on deploy; customized copies receive a `.acx-incoming` sidecar. No trigger-rate change was measured on any host, so do not read this as one.
+- **Upstream only, no adopter-visible behavior.**
+  - CI's TruffleHog scanner now actually runs 3.97.1. The dependabot bump (#425) moved the wrapper action but left the scanner image digest on 3.96.0, and a test now fails when the two name different releases.
+  - `docs/INSTALL.md` now says that a `custom-*` skill surviving an upgrade is not the same as it being activated (#436).
+  - `repo-gotchas.md` §16 records how Codex selects skills (#438). That file ships, but as guidance for agents working on the framework itself.
+
+**Downstream delta.** 6 of the 26 files changed since v1.8.26 reach an adopter:
+
+- `deploy.sh`, `repo-gotchas.md` and `trigger-compact-index.json` (core tier, force-updated)
+- the two `SKILL.md` files (scaffold tier)
+- `current_state.md` (scaffold tier, so your own copy is preserved)
+
+There is no engine, gate-order, or configuration change.
+
 ## [1.8.26] - 2026-09-05
 
 This release carries one security fix that adopters must act on, plus two upstream guards. **If you installed the pre-commit hook, re-run the INSTALL copy after updating — the fix does not reach your installed hook on its own.**
