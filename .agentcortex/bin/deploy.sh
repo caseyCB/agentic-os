@@ -1093,9 +1093,8 @@ write_downstream_ignore_block() {
 *.acx-incoming
 *.acx-local
 
-# Python bytecode produced by Agentic OS validation/tools
-__pycache__/
-*.pyc
+# Framework Tool Bytecode (framework namespace only; project policy untouched)
+.agentcortex/**/__pycache__/
 
 # Per-Operator Tool State (this project's .claude/settings.json declares
 # settings.local.json user-local; keep git agreeing with that declaration)
@@ -1129,6 +1128,7 @@ strip_managed_ignore_blocks() {
         managed[".agentcortex-src/"] = 1
         managed["*.acx-incoming"] = 1
         managed["*.acx-local"] = 1
+        managed[".agentcortex/**/__pycache__/"] = 1
         managed[".claude/settings.local.json"] = 1
         managed[".openrouter/"] = 1
         managed[".claude-chat/"] = 1
