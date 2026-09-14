@@ -477,7 +477,7 @@ def test_redeploy_leaves_gitignore_unchanged_and_adopter_policy_alone() -> None:
         subprocess.run([git_path, "init", "-q", str(target)], check=True)
         adopter_rules = "node_modules/\ndist/\n"
         gitignore = target / ".gitignore"
-        gitignore.write_text(adopter_rules, encoding="utf-8", newline="\n")
+        gitignore.write_bytes(adopter_rules.encode("utf-8"))
 
         assert _deploy(target).returncode == 0, "first deploy failed"
         first = gitignore.read_bytes()
