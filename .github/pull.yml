@@ -1,0 +1,6 @@
+version: "1"
+rules:
+  - base: main
+    upstream: KbWen:main
+    mergeMethod: none
+    mergeUnstable: false
